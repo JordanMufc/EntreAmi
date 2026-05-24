@@ -21,6 +21,7 @@ const MAPPING = {
   'person.2.fill': 'group',
   'paperplane.fill': 'send',
   'arrow.left.arrow.right': 'compare-arrows',
+  'chevron.left': 'chevron-left',
   'chevron.left.forwardslash.chevron.right': 'code',
   'chevron.right': 'chevron-right',
 } as IconMapping;

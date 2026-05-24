@@ -11,6 +11,7 @@ import {
   View,
 } from 'react-native';
 
+import { BackToHomeButton } from '@/components/back-to-home-button';
 import { useEvents } from '@/src/context/events-context';
 
 export default function EventsScreen() {
@@ -66,6 +67,8 @@ export default function EventsScreen() {
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={styles.screen}>
+      <BackToHomeButton />
+
       <View style={styles.header}>
         <Text style={styles.title}>Événements</Text>
         <Text style={styles.subtitle}>

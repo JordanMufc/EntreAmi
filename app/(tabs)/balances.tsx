@@ -1,5 +1,6 @@
 import { FlatList, StyleSheet, Text, View } from 'react-native';
 
+import { BackToHomeButton } from '@/components/back-to-home-button';
 import { useEvents } from '@/src/context/events-context';
 
 export default function BalancesScreen() {
@@ -7,6 +8,8 @@ export default function BalancesScreen() {
 
   return (
     <View style={styles.container}>
+      <BackToHomeButton />
+
       <View style={styles.header}>
         <Text style={styles.title}>Soldes</Text>
         <Text style={styles.subtitle}>

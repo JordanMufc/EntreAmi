@@ -10,6 +10,7 @@ import {
   View,
 } from 'react-native';
 
+import { BackToHomeButton } from '@/components/back-to-home-button';
 import { useEvents } from '@/src/context/events-context';
 import { InvitationStatus } from '@/src/types/event';
 
@@ -74,6 +75,8 @@ export default function InvitationsScreen() {
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
+      <BackToHomeButton />
+
       <View style={styles.header}>
         <Text style={styles.title}>Invitations</Text>
         <Text style={styles.subtitle}>
