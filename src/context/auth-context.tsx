@@ -1,88 +1,130 @@
+import { User } from "@supabase/supabase-js";
 import {
   createContext,
   PropsWithChildren,
   useContext,
+  useEffect,
   useMemo,
   useState,
 } from "react";
 
+import { supabase } from "@/src/lib/supabase";
 import { AuthUser, LoginInput, RegisterInput } from "@/src/types/auth";
-
-interface StoredUser extends AuthUser {
-  password: string;
-}
 
 interface AuthContextValue {
   user: AuthUser | null;
+  loading: boolean;
   login: (input: LoginInput) => Promise<void>;
   register: (input: RegisterInput) => Promise<void>;
-  logout: () => void;
+  logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-const initialUsers: StoredUser[] = [
-  {
-    id: "demo-user",
-    username: "Demo",
-    email: "demo@entreami.be",
-    password: "demo1234",
-  },
-];
-
-function toAuthUser(user: StoredUser): AuthUser {
+function toAuthUser(user: User): AuthUser {
   return {
     id: user.id,
-    username: user.username,
-    email: user.email,
+    username:
+      typeof user.user_metadata?.username === "string"
+        ? user.user_metadata.username
+        : (user.email?.split("@")[0] ?? "Utilisateur"),
+    email: user.email ?? "",
   };
 }
 
 export function AuthProvider({ children }: PropsWithChildren) {
-  const [users, setUsers] = useState<StoredUser[]>(initialUsers);
   const [user, setUser] = useState<AuthUser | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    let mounted = true;
+
+    supabase.auth
+      .getUser()
+      .then(({ data, error }) => {
+        if (!mounted) {
+          return;
+        }
+
+        if (error || !data.user) {
+          setUser(null);
+        } else {
+          setUser(toAuthUser(data.user));
+        }
+      })
+      .finally(() => {
+        if (mounted) {
+          setLoading(false);
+        }
+      });
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ? toAuthUser(session.user) : null);
+      setLoading(false);
+    });
+
+    return () => {
+      mounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
 
   const value = useMemo<AuthContextValue>(
     () => ({
       user,
+      loading,
       login: async ({ email, password }) => {
-        const foundUser = users.find(
-          (currentUser) =>
-            currentUser.email.toLowerCase() === email.trim().toLowerCase() &&
-            currentUser.password === password,
-        );
+        const { data, error } = await supabase.auth.signInWithPassword({
+          email: email.trim().toLowerCase(),
+          password,
+        });
 
-        if (!foundUser) {
-          throw new Error("Email ou mot de passe incorrect.");
+        if (error) {
+          throw new Error(error.message);
         }
 
-        setUser(toAuthUser(foundUser));
+        if (data.user) {
+          setUser(toAuthUser(data.user));
+        }
       },
       register: async ({ username, email, password }) => {
-        const cleanEmail = email.trim().toLowerCase();
-        const existingUser = users.find(
-          (currentUser) => currentUser.email === cleanEmail,
-        );
+        const { data, error } = await supabase.auth.signUp({
+          email: email.trim().toLowerCase(),
+          password,
+          options: {
+            data: {
+              username: username.trim(),
+            },
+          },
+        });
 
-        if (existingUser) {
-          throw new Error("Un compte existe déjà avec cet email.");
+        if (error) {
+          throw new Error(error.message);
         }
 
-        const newUser: StoredUser = {
-          id: String(Date.now()),
-          username: username.trim(),
-          email: cleanEmail,
-          password,
-        };
+        if (!data.session) {
+          throw new Error(
+            "Compte créé. Confirmez votre email avant de vous connecter.",
+          );
+        }
 
-        setUsers((currentUsers) => [...currentUsers, newUser]);
-        setUser(toAuthUser(newUser));
+        if (data.user) {
+          setUser(toAuthUser(data.user));
+        }
       },
-      logout: () => {
+      logout: async () => {
+        const { error } = await supabase.auth.signOut();
+
+        if (error) {
+          throw new Error(error.message);
+        }
+
         setUser(null);
       },
     }),
-    [user, users],
+    [loading, user],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
