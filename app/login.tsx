@@ -17,12 +17,17 @@ import { useAuth } from "@/src/context/auth-context";
 export default function LoginScreen() {
   const { login } = useAuth();
   const [email, setEmail] = useState("");
+  const [errorMessage, setErrorMessage] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
+    setErrorMessage("");
+
     if (!email.trim() || !password) {
-      Alert.alert("Connexion impossible", "Veuillez remplir tous les champs.");
+      const message = "Veuillez remplir tous les champs.";
+      setErrorMessage(message);
+      Alert.alert("Connexion impossible", message);
       return;
     }
 
@@ -32,10 +37,9 @@ export default function LoginScreen() {
       await login({ email, password });
       router.replace("/(tabs)");
     } catch (error) {
-      Alert.alert(
-        "Connexion impossible",
-        error instanceof Error ? error.message : "Réessayez.",
-      );
+      const message = error instanceof Error ? error.message : "Réessayez.";
+      setErrorMessage(message);
+      Alert.alert("Connexion impossible", message);
     } finally {
       setLoading(false);
     }
@@ -93,6 +97,12 @@ export default function LoginScreen() {
               <Text style={styles.buttonText}>Se connecter</Text>
             )}
           </Pressable>
+
+          {errorMessage ? (
+            <Text accessibilityLiveRegion="polite" style={styles.errorText}>
+              {errorMessage}
+            </Text>
+          ) : null}
         </View>
 
         <View style={styles.footer}>
@@ -173,6 +183,12 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "700",
     color: "#fff",
+  },
+  errorText: {
+    color: "#b42318",
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: "center",
   },
   footer: {
     flexDirection: "row",

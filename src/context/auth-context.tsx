@@ -15,11 +15,27 @@ interface AuthContextValue {
   user: AuthUser | null;
   loading: boolean;
   login: (input: LoginInput) => Promise<void>;
-  register: (input: RegisterInput) => Promise<void>;
+  register: (
+    input: RegisterInput,
+  ) => Promise<{ requiresEmailConfirmation: boolean }>;
   logout: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null);
+
+function getAuthErrorMessage(message: string): string {
+  const normalizedMessage = message.toLowerCase();
+
+  if (normalizedMessage.includes("email not confirmed")) {
+    return "Confirmez votre email avant de vous connecter.";
+  }
+
+  if (normalizedMessage.includes("invalid login credentials")) {
+    return "Email ou mot de passe incorrect.";
+  }
+
+  return message;
+}
 
 function toAuthUser(user: User): AuthUser {
   return {
@@ -82,10 +98,10 @@ export function AuthProvider({ children }: PropsWithChildren) {
         });
 
         if (error) {
-          throw new Error(error.message);
+          throw new Error(getAuthErrorMessage(error.message));
         }
 
-        if (data.user) {
+        if (data.session && data.user) {
           setUser(toAuthUser(data.user));
         }
       },
@@ -104,15 +120,11 @@ export function AuthProvider({ children }: PropsWithChildren) {
           throw new Error(error.message);
         }
 
-        if (!data.session) {
-          throw new Error(
-            "Compte créé. Confirmez votre email avant de vous connecter.",
-          );
-        }
-
-        if (data.user) {
+        if (data.session && data.user) {
           setUser(toAuthUser(data.user));
         }
+
+        return { requiresEmailConfirmation: !data.session };
       },
       logout: async () => {
         const { error } = await supabase.auth.signOut();

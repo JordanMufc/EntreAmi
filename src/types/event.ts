@@ -16,3 +16,79 @@ export interface CreateEventInput {
   location: string;
   description: string;
 }
+
+export type InvitationStatus = 'pending' | 'accepted' | 'declined';
+
+export type FriendStatus = 'invited' | 'accepted';
+
+export interface Friend {
+  id: string;
+  name: string;
+  email: string;
+  status: FriendStatus;
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface CreateFriendInput {
+  name: string;
+  email: string;
+}
+
+export interface Invitation {
+  id: string;
+  eventId: string;
+  email: string;
+  name: string;
+  status: InvitationStatus;
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface CreateInvitationInput {
+  eventId: string;
+  email: string;
+  name: string;
+}
+
+export interface ExpenseParticipant {
+  id: string;
+  expenseId: string;
+  name: string;
+  email: string;
+}
+
+export interface Expense {
+  id: string;
+  eventId: string;
+  title: string;
+  amount: number;
+  paidBy: string;
+  paidByEmail: string;
+  date: string;
+  participants: ExpenseParticipant[];
+  createdBy: string;
+  createdAt: string;
+}
+
+export interface CreateExpenseInput {
+  eventId: string;
+  title: string;
+  amount: number;
+  paidBy: string;
+  paidByEmail: string;
+  date: string;
+  participants: {
+    name: string;
+    email: string;
+  }[];
+}
+
+export interface BalanceLine {
+  id: string;
+  eventId: string;
+  eventTitle: string;
+  from: string;
+  to: string;
+  amount: number;
+}

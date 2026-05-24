@@ -21,6 +21,8 @@ export default function EventsScreen() {
   const [time, setTime] = useState('');
   const [location, setLocation] = useState('');
   const [description, setDescription] = useState('');
+  const [message, setMessage] = useState('');
+  const [messageType, setMessageType] = useState<'error' | 'success'>('error');
   const [loading, setLoading] = useState(false);
 
   const resetForm = () => {
@@ -32,11 +34,13 @@ export default function EventsScreen() {
   };
 
   const handleCreateEvent = async () => {
+    setMessage('');
+
     if (!title.trim() || !date.trim() || !time.trim() || !location.trim()) {
-      Alert.alert(
-        'Création impossible',
-        'Veuillez renseigner le titre, la date, l’heure et le lieu.',
-      );
+      const validationMessage = 'Veuillez renseigner le titre, la date, l’heure et le lieu.';
+      setMessageType('error');
+      setMessage(validationMessage);
+      Alert.alert('Création impossible', validationMessage);
       return;
     }
 
@@ -45,12 +49,14 @@ export default function EventsScreen() {
     try {
       await createEvent({ title, date, time, location, description });
       resetForm();
+      setMessageType('success');
+      setMessage('Événement enregistré.');
       setShowForm(false);
     } catch (error) {
-      Alert.alert(
-        'Création impossible',
-        error instanceof Error ? error.message : 'Réessayez.',
-      );
+      const errorMessage = error instanceof Error ? error.message : 'Réessayez.';
+      setMessageType('error');
+      setMessage(errorMessage);
+      Alert.alert('Création impossible', errorMessage);
     } finally {
       setLoading(false);
     }
@@ -148,13 +154,33 @@ export default function EventsScreen() {
               <Text style={styles.secondaryButtonText}>Annuler</Text>
             </Pressable>
           </View>
+
+          {message ? (
+            <Text
+              accessibilityLiveRegion="polite"
+              style={[styles.feedback, messageType === 'success' && styles.successFeedback]}>
+              {message}
+            </Text>
+          ) : null}
         </View>
       ) : (
-        <Pressable
-          onPress={() => setShowForm(true)}
-          style={({ pressed }) => [styles.button, styles.primaryButton, pressed && styles.pressed]}>
-          <Text style={styles.primaryButtonText}>Créer un événement</Text>
-        </Pressable>
+        <View style={styles.createBlock}>
+          <Pressable
+            onPress={() => {
+              setMessage('');
+              setShowForm(true);
+            }}
+            style={({ pressed }) => [styles.button, styles.primaryButton, pressed && styles.pressed]}>
+            <Text style={styles.primaryButtonText}>Créer un événement</Text>
+          </Pressable>
+          {message ? (
+            <Text
+              accessibilityLiveRegion="polite"
+              style={[styles.feedback, messageType === 'success' && styles.successFeedback]}>
+              {message}
+            </Text>
+          ) : null}
+        </View>
       )}
 
       <FlatList
@@ -260,6 +286,9 @@ const styles = StyleSheet.create({
   actions: {
     gap: 10,
   },
+  createBlock: {
+    gap: 10,
+  },
   button: {
     minHeight: 50,
     alignItems: 'center',
@@ -289,6 +318,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#25313b',
+  },
+  feedback: {
+    color: '#b42318',
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
+  },
+  successFeedback: {
+    color: '#147d64',
   },
   list: {
     gap: 12,

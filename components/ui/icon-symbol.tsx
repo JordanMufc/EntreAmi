@@ -17,6 +17,7 @@ const MAPPING = {
   'calendar.badge.plus': 'event',
   'creditcard.fill': 'credit-card',
   'house.fill': 'home',
+  'person.badge.plus': 'person-add',
   'person.2.fill': 'group',
   'paperplane.fill': 'send',
   'arrow.left.arrow.right': 'compare-arrows',

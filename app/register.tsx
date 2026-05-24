@@ -35,7 +35,17 @@ export default function RegisterScreen() {
     setLoading(true);
 
     try {
-      await register({ username, email, password });
+      const result = await register({ username, email, password });
+
+      if (result.requiresEmailConfirmation) {
+        Alert.alert(
+          'Compte créé',
+          'Confirmez votre email avant de vous connecter.',
+        );
+        router.replace('/login');
+        return;
+      }
+
       router.replace('/(tabs)');
     } catch (error) {
       Alert.alert('Inscription impossible', error instanceof Error ? error.message : 'Réessayez.');
