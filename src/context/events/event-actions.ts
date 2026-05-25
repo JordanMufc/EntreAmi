@@ -78,9 +78,11 @@ export function createEventActions({
           time: time.trim(),
           location: location.trim(),
           description: description.trim(),
+          creator_name: user.username.trim(),
+          creator_email: user.email.trim().toLowerCase(),
           created_by: session.user.id,
         })
-        .select('id,title,date,time,location,description,created_by,created_at')
+        .select('id,title,date,time,location,description,creator_name,creator_email,created_by,created_at')
         .single();
 
       if (error) {

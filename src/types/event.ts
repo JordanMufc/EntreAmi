@@ -5,6 +5,8 @@ export interface Event {
   time: string;
   location: string;
   description: string;
+  creatorName: string;
+  creatorEmail: string;
   createdBy: string;
   createdAt: string;
 }

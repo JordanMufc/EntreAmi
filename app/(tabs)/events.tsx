@@ -14,7 +14,7 @@ import {
 import { BackToHomeButton } from '@/components/back-to-home-button';
 import { useAuth } from '@/src/context/auth-context';
 import { useEvents } from '@/src/context/events-context';
-import { Friend, Invitation } from '@/src/types/event';
+import { Event, Friend, Invitation } from '@/src/types/event';
 
 function getAcceptedParticipants(eventId: string, invitations: Invitation[]) {
   return invitations
@@ -38,6 +38,36 @@ function getUniqueParticipants(participants: { name: string; email: string }[]) 
   }
 
   return [...uniqueParticipants.values()];
+}
+
+function getEventCreatorParticipant(event: Event, currentUser: { name: string; email: string }) {
+  if (event.creatorEmail) {
+    return {
+      name: event.creatorName || event.creatorEmail,
+      email: event.creatorEmail,
+    };
+  }
+
+  return event.createdBy && currentUser.email
+    ? {
+        name: currentUser.name,
+        email: currentUser.email,
+      }
+    : null;
+}
+
+function getEventParticipants(
+  event: Event,
+  currentUser: { name: string; email: string },
+  invitations: Invitation[],
+) {
+  const creatorParticipant = getEventCreatorParticipant(event, currentUser);
+
+  return getUniqueParticipants([
+    ...(creatorParticipant ? [creatorParticipant] : []),
+    currentUser,
+    ...getAcceptedParticipants(event.id, invitations),
+  ]);
 }
 
 function getFriendContact(friend: Friend, currentUserId?: string) {
@@ -261,13 +291,10 @@ export default function EventsScreen() {
     setExpenseParticipantEmails([]);
   };
 
-  const openExpenseForm = (eventId: string) => {
-    const participants = getUniqueParticipants([
-      currentUserParticipant,
-      ...getAcceptedParticipants(eventId, invitations),
-    ]);
+  const openExpenseForm = (event: Event) => {
+    const participants = getEventParticipants(event, currentUserParticipant, invitations);
 
-    setActiveExpenseEventId(eventId);
+    setActiveExpenseEventId(event.id);
     setExpensePaidBy(currentUserParticipant.email);
     setExpenseParticipantEmails(participants.map((participant) => participant.email));
   };
@@ -281,11 +308,15 @@ export default function EventsScreen() {
   };
 
   const handleCreateExpense = async (eventId: string) => {
+    const event = events.find((currentEvent) => currentEvent.id === eventId);
+
+    if (!event) {
+      Alert.alert('Dépense impossible', 'Événement introuvable.');
+      return;
+    }
+
     const amount = Number(expenseAmount.replace(',', '.'));
-    const participants = getUniqueParticipants([
-      currentUserParticipant,
-      ...getAcceptedParticipants(eventId, invitations),
-    ]);
+    const participants = getEventParticipants(event, currentUserParticipant, invitations);
     const payer = participants.find((participant) => participant.email === expensePaidBy);
     const selectedParticipants = participants.filter((participant) =>
       expenseParticipantEmails.includes(participant.email),
@@ -586,10 +617,7 @@ export default function EventsScreen() {
                 <View style={styles.eventSection}>
                   <Text style={styles.eventSectionTitle}>Participants acceptés</Text>
                   <View style={styles.participantList}>
-                    {getUniqueParticipants([
-                      currentUserParticipant,
-                      ...getAcceptedParticipants(item.id, invitations),
-                    ]).map((participant) => (
+                    {getEventParticipants(item, currentUserParticipant, invitations).map((participant) => (
                         <Text key={participant.email} style={styles.participantChip}>
                           {participant.name}
                         </Text>
@@ -739,10 +767,7 @@ export default function EventsScreen() {
                     <View style={styles.field}>
                       <Text style={styles.label}>Qui a payé ?</Text>
                       <View style={styles.friendList}>
-                        {getUniqueParticipants([
-                          currentUserParticipant,
-                          ...getAcceptedParticipants(item.id, invitations),
-                        ]).map((participant) => {
+                        {getEventParticipants(item, currentUserParticipant, invitations).map((participant) => {
                           const selected = expensePaidBy === participant.email;
 
                           return (
@@ -770,10 +795,7 @@ export default function EventsScreen() {
                     <View style={styles.field}>
                       <Text style={styles.label}>Pour qui ?</Text>
                       <View style={styles.friendList}>
-                        {getUniqueParticipants([
-                          currentUserParticipant,
-                          ...getAcceptedParticipants(item.id, invitations),
-                        ]).map((participant) => {
+                        {getEventParticipants(item, currentUserParticipant, invitations).map((participant) => {
                           const selected = expenseParticipantEmails.includes(participant.email);
 
                           return (
@@ -830,7 +852,7 @@ export default function EventsScreen() {
                   </View>
                 ) : (
                   <Pressable
-                    onPress={() => openExpenseForm(item.id)}
+                    onPress={() => openExpenseForm(item)}
                     style={({ pressed }) => [
                       styles.button,
                       styles.secondaryButton,

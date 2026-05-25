@@ -5,9 +5,22 @@ create table if not exists public.events (
   time text not null,
   location text not null,
   description text default '',
+  creator_name text default '',
+  creator_email text default '',
   created_by uuid not null references auth.users(id) on delete cascade,
   created_at timestamptz not null default now()
 );
+
+alter table public.events add column if not exists creator_name text default '';
+alter table public.events add column if not exists creator_email text default '';
+
+update public.events
+set
+  creator_email = auth.users.email,
+  creator_name = coalesce(auth.users.raw_user_meta_data ->> 'username', split_part(auth.users.email, '@', 1))
+from auth.users
+where public.events.created_by = auth.users.id
+and coalesce(public.events.creator_email, '') = '';
 
 alter table public.events enable row level security;
 

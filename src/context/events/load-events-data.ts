@@ -32,7 +32,7 @@ export interface EventsData {
 export async function loadEventsData(): Promise<EventsData> {
   const { data, error } = await supabase
     .from("events")
-    .select("id,title,date,time,location,description,created_by,created_at")
+    .select("id,title,date,time,location,description,creator_name,creator_email,created_by,created_at")
     .order("created_at", { ascending: false });
 
   if (error) {

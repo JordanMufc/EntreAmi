@@ -15,6 +15,8 @@ export interface EventRow {
   time: string;
   location: string;
   description: string | null;
+  creator_name: string | null;
+  creator_email: string | null;
   created_by: string;
   created_at: string;
 }
@@ -67,6 +69,8 @@ export function toEvent(row: EventRow): Event {
     time: row.time,
     location: row.location,
     description: row.description ?? '',
+    creatorName: row.creator_name ?? '',
+    creatorEmail: row.creator_email ?? '',
     createdBy: row.created_by,
     createdAt: row.created_at,
   };
