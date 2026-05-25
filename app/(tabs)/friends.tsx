@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import {
   Alert,
   FlatList,
@@ -11,18 +11,39 @@ import {
 } from 'react-native';
 
 import { BackToHomeButton } from '@/components/back-to-home-button';
+import { useAuth } from '@/src/context/auth-context';
 import { useEvents } from '@/src/context/events-context';
+import { Friend, FriendStatus } from '@/src/types/event';
 
 const statusLabels = {
   invited: 'Invité',
   accepted: 'Accepté',
+  declined: 'Refusé',
 } as const;
 
+function getFriendContact(friend: Friend, currentUserId?: string) {
+  if (friend.createdBy === currentUserId) {
+    return {
+      name: friend.name,
+      email: friend.email,
+    };
+  }
+
+  return {
+    name: friend.requesterName || 'Ami',
+    email: friend.requesterEmail,
+  };
+}
+
 export default function FriendsScreen() {
-  const { createFriend, friends } = useEvents();
+  const { user } = useAuth();
+  const { createFriend, deleteFriend, friends, onlineFriendEmails, updateFriendStatus } =
+    useEvents();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
+  const [deletingFriendId, setDeletingFriendId] = useState('');
+  const [pendingDeleteFriendId, setPendingDeleteFriendId] = useState('');
   const [message, setMessage] = useState('');
   const [messageType, setMessageType] = useState<'error' | 'success'>('error');
 
@@ -30,6 +51,31 @@ export default function FriendsScreen() {
     setName('');
     setEmail('');
   };
+
+  const receivedRequests = useMemo(
+    () =>
+      friends.filter(
+        (friend) =>
+          friend.email.toLowerCase() === user?.email.toLowerCase() && friend.createdBy !== user.id,
+      ).filter(
+        (friend) => friend.status === 'invited',
+      ),
+    [friends, user],
+  );
+  const addressBookFriends = useMemo(
+    () =>
+      friends.filter((friend) => {
+        if (friend.createdBy === user?.id) {
+          return friend.status !== 'declined';
+        }
+
+        return (
+          friend.email.toLowerCase() === user?.email.toLowerCase() &&
+          friend.status === 'accepted'
+        );
+      }),
+    [friends, user],
+  );
 
   const handleCreateFriend = async () => {
     setMessage('');
@@ -56,6 +102,33 @@ export default function FriendsScreen() {
       Alert.alert('Invitation impossible', errorMessage);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleStatusChange = async (id: string, status: FriendStatus) => {
+    try {
+      await updateFriendStatus(id, status);
+    } catch (error) {
+      Alert.alert('Mise à jour impossible', error instanceof Error ? error.message : 'Réessayez.');
+    }
+  };
+
+  const handleDeleteFriend = async (id: string) => {
+    setDeletingFriendId(id);
+    setMessage('');
+
+    try {
+      await deleteFriend(id);
+      setPendingDeleteFriendId('');
+      setMessageType('success');
+      setMessage('Ami supprimé du carnet.');
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Réessayez.';
+      setMessageType('error');
+      setMessage(errorMessage);
+      Alert.alert('Suppression impossible', errorMessage);
+    } finally {
+      setDeletingFriendId('');
     }
   };
 
@@ -116,10 +189,78 @@ export default function FriendsScreen() {
       </View>
 
       <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Demandes reçues</Text>
+        <FlatList
+          contentContainerStyle={receivedRequests.length === 0 ? styles.emptyList : styles.list}
+          data={receivedRequests}
+          keyExtractor={(friend) => friend.id}
+          ListEmptyComponent={
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Aucune demande reçue</Text>
+              <Text style={styles.cardText}>
+                Les demandes d’ami envoyées à votre email apparaîtront ici.
+              </Text>
+            </View>
+          }
+          renderItem={({ item }) => (
+            <View style={styles.requestCard}>
+              <View style={styles.friendCardHeader}>
+                <View style={styles.friendIdentity}>
+                  <View style={styles.nameRow}>
+                    <Text style={styles.cardTitle}>{item.name}</Text>
+                    {onlineFriendEmails.includes(item.email.toLowerCase()) ? (
+                      <View accessibilityLabel="En ligne" style={styles.onlineDot} />
+                    ) : null}
+                  </View>
+                  <Text style={styles.cardText}>Vous a envoyé une demande d’ami.</Text>
+                </View>
+                <Text style={styles.status}>{statusLabels[item.status]}</Text>
+              </View>
+
+              <View style={styles.statusActions}>
+                <Pressable
+                  onPress={() => handleStatusChange(item.id, 'accepted')}
+                  style={({ pressed }) => [
+                    styles.statusButton,
+                    item.status === 'accepted' && styles.statusButtonActive,
+                    pressed && styles.pressed,
+                  ]}>
+                  <Text
+                    style={[
+                      styles.statusButtonText,
+                      item.status === 'accepted' && styles.statusButtonTextActive,
+                    ]}>
+                    Accepter
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => handleStatusChange(item.id, 'declined')}
+                  style={({ pressed }) => [
+                    styles.statusButton,
+                    item.status === 'declined' && styles.statusButtonDanger,
+                    pressed && styles.pressed,
+                  ]}>
+                  <Text
+                    style={[
+                      styles.statusButtonText,
+                      item.status === 'declined' && styles.statusButtonDangerText,
+                    ]}>
+                    Refuser
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          )}
+          scrollEnabled={false}
+        />
+      </View>
+
+      <View style={styles.section}>
         <Text style={styles.sectionTitle}>Carnet d’amis</Text>
         <FlatList
-          contentContainerStyle={friends.length === 0 ? styles.emptyList : styles.list}
-          data={friends}
+          contentContainerStyle={addressBookFriends.length === 0 ? styles.emptyList : styles.list}
+          data={addressBookFriends}
           keyExtractor={(friend) => friend.id}
           ListEmptyComponent={
             <View style={styles.card}>
@@ -129,15 +270,60 @@ export default function FriendsScreen() {
               </Text>
             </View>
           }
-          renderItem={({ item }) => (
-            <View style={styles.friendCard}>
-              <View style={styles.friendIdentity}>
-                <Text style={styles.cardTitle}>{item.name}</Text>
-                <Text style={styles.cardText}>{item.email}</Text>
+          renderItem={({ item }) => {
+            const contact = getFriendContact(item, user?.id);
+            const isConfirmingDelete = pendingDeleteFriendId === item.id;
+            const isDeleting = deletingFriendId === item.id;
+
+            return (
+              <View style={styles.friendCard}>
+                <View style={styles.friendIdentity}>
+                  <View style={styles.nameRow}>
+                    <Text style={styles.cardTitle}>{contact.name}</Text>
+                    {contact.email && onlineFriendEmails.includes(contact.email.toLowerCase()) ? (
+                      <View accessibilityLabel="En ligne" style={styles.onlineDot} />
+                    ) : null}
+                  </View>
+                  <Text style={styles.cardText}>{contact.email || 'Email non disponible'}</Text>
+                </View>
+                <View style={styles.friendCardActions}>
+                  <Text style={styles.status}>{statusLabels[item.status]}</Text>
+                  <Pressable
+                    accessibilityLabel={`Supprimer ${contact.name}`}
+                    disabled={isDeleting}
+                    onPress={() => {
+                      if (isConfirmingDelete) {
+                        void handleDeleteFriend(item.id);
+                        return;
+                      }
+
+                      setPendingDeleteFriendId(item.id);
+                    }}
+                    style={({ pressed }) => [
+                      styles.deleteButton,
+                      isConfirmingDelete && styles.deleteButtonConfirm,
+                      pressed && styles.pressed,
+                      isDeleting && styles.disabled,
+                    ]}>
+                    <Text
+                      style={[
+                        styles.deleteButtonText,
+                        isConfirmingDelete && styles.deleteButtonConfirmText,
+                      ]}>
+                      {isDeleting ? 'Suppression...' : isConfirmingDelete ? 'Confirmer' : 'Supprimer'}
+                    </Text>
+                  </Pressable>
+                  {isConfirmingDelete ? (
+                    <Pressable
+                      onPress={() => setPendingDeleteFriendId('')}
+                      style={({ pressed }) => [styles.cancelDeleteButton, pressed && styles.pressed]}>
+                      <Text style={styles.cancelDeleteButtonText}>Annuler</Text>
+                    </Pressable>
+                  ) : null}
+                </View>
               </View>
-              <Text style={styles.status}>{statusLabels[item.status]}</Text>
-            </View>
-          )}
+            );
+          }}
           scrollEnabled={false}
         />
       </View>
@@ -231,7 +417,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#fff',
   },
   friendCard: {
-    alignItems: 'center',
+    alignItems: 'flex-start',
     flexDirection: 'row',
     justifyContent: 'space-between',
     gap: 12,
@@ -239,14 +425,41 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     backgroundColor: '#fff',
   },
+  requestCard: {
+    gap: 14,
+    padding: 18,
+    borderRadius: 8,
+    backgroundColor: '#fff',
+  },
+  friendCardHeader: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 12,
+  },
   friendIdentity: {
     flex: 1,
     gap: 4,
+  },
+  friendCardActions: {
+    alignItems: 'flex-end',
+    gap: 8,
   },
   cardTitle: {
     fontSize: 18,
     fontWeight: '700',
     color: '#25313b',
+  },
+  nameRow: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: 8,
+  },
+  onlineDot: {
+    width: 10,
+    height: 10,
+    borderRadius: 5,
+    backgroundColor: '#1fa463',
   },
   cardText: {
     fontSize: 16,
@@ -257,6 +470,67 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '700',
     color: '#0a7ea4',
+  },
+  deleteButton: {
+    minHeight: 36,
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#f1b8b2',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    backgroundColor: '#fff5f4',
+  },
+  deleteButtonConfirm: {
+    borderColor: '#b42318',
+    backgroundColor: '#b42318',
+  },
+  deleteButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#b42318',
+  },
+  deleteButtonConfirmText: {
+    color: '#fff',
+  },
+  cancelDeleteButton: {
+    minHeight: 32,
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
+  cancelDeleteButtonText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#52616f',
+  },
+  statusActions: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+  },
+  statusButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 9,
+    borderWidth: 1,
+    borderColor: '#ccd6df',
+    borderRadius: 8,
+  },
+  statusButtonActive: {
+    borderColor: '#0a7ea4',
+    backgroundColor: '#e8f6fa',
+  },
+  statusButtonDanger: {
+    borderColor: '#b42318',
+    backgroundColor: '#fff0ee',
+  },
+  statusButtonText: {
+    fontWeight: '700',
+    color: '#52616f',
+  },
+  statusButtonTextActive: {
+    color: '#0a7ea4',
+  },
+  statusButtonDangerText: {
+    color: '#b42318',
   },
   pressed: {
     opacity: 0.8,

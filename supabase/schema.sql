@@ -44,10 +44,15 @@ create table if not exists public.friends (
   id uuid primary key default gen_random_uuid(),
   name text not null,
   email text not null,
-  status text not null default 'invited' check (status in ('invited', 'accepted')),
+  requester_name text default '',
+  requester_email text default '',
+  status text not null default 'invited' check (status in ('invited', 'accepted', 'declined')),
   created_by uuid not null references auth.users(id) on delete cascade,
   created_at timestamptz not null default now()
 );
+
+alter table public.friends add column if not exists requester_name text default '';
+alter table public.friends add column if not exists requester_email text default '';
 
 alter table public.friends enable row level security;
 
@@ -56,7 +61,10 @@ create policy "Users can read their own friends"
 on public.friends
 for select
 to authenticated
-using (created_by = (select auth.uid()));
+using (
+  created_by = (select auth.uid())
+  or lower(email) = lower((select auth.jwt() ->> 'email'))
+);
 
 drop policy if exists "Users can create their own friends" on public.friends;
 create policy "Users can create their own friends"
@@ -70,15 +78,24 @@ create policy "Users can update their own friends"
 on public.friends
 for update
 to authenticated
-using (created_by = (select auth.uid()))
-with check (created_by = (select auth.uid()));
+using (
+  created_by = (select auth.uid())
+  or lower(email) = lower((select auth.jwt() ->> 'email'))
+)
+with check (
+  created_by = (select auth.uid())
+  or lower(email) = lower((select auth.jwt() ->> 'email'))
+);
 
 drop policy if exists "Users can delete their own friends" on public.friends;
 create policy "Users can delete their own friends"
 on public.friends
 for delete
 to authenticated
-using (created_by = (select auth.uid()));
+using (
+  created_by = (select auth.uid())
+  or lower(email) = lower((select auth.jwt() ->> 'email'))
+);
 
 create table if not exists public.invitations (
   id uuid primary key default gen_random_uuid(),
@@ -92,6 +109,50 @@ create table if not exists public.invitations (
 
 alter table public.invitations enable row level security;
 
+create or replace function public.user_owns_event(target_event_id uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.events
+    where id = target_event_id
+    and created_by = (select auth.uid())
+  );
+$$;
+
+create or replace function public.user_is_invited_to_event(target_event_id uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.invitations
+    where event_id = target_event_id
+    and lower(email) = lower((select auth.jwt() ->> 'email'))
+  );
+$$;
+
+create or replace function public.user_can_contribute_to_event(target_event_id uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select public.user_owns_event(target_event_id)
+  or exists (
+    select 1
+    from public.invitations
+    where event_id = target_event_id
+    and status = 'accepted'
+    and lower(email) = lower((select auth.jwt() ->> 'email'))
+  );
+$$;
+
 drop policy if exists "Users can read invitations for their events" on public.invitations;
 create policy "Users can read invitations for their events"
 on public.invitations
@@ -99,11 +160,8 @@ for select
 to authenticated
 using (
   created_by = (select auth.uid())
-  or exists (
-    select 1 from public.events
-    where events.id = invitations.event_id
-    and events.created_by = (select auth.uid())
-  )
+  or lower(email) = lower((select auth.jwt() ->> 'email'))
+  or public.user_owns_event(event_id)
 );
 
 drop policy if exists "Users can create invitations for their events" on public.invitations;
@@ -113,11 +171,7 @@ for insert
 to authenticated
 with check (
   created_by = (select auth.uid())
-  and exists (
-    select 1 from public.events
-    where events.id = invitations.event_id
-    and events.created_by = (select auth.uid())
-  )
+  and public.user_owns_event(event_id)
 );
 
 drop policy if exists "Users can update invitations for their events" on public.invitations;
@@ -126,18 +180,12 @@ on public.invitations
 for update
 to authenticated
 using (
-  exists (
-    select 1 from public.events
-    where events.id = invitations.event_id
-    and events.created_by = (select auth.uid())
-  )
+  lower(email) = lower((select auth.jwt() ->> 'email'))
+  or public.user_owns_event(event_id)
 )
 with check (
-  exists (
-    select 1 from public.events
-    where events.id = invitations.event_id
-    and events.created_by = (select auth.uid())
-  )
+  lower(email) = lower((select auth.jwt() ->> 'email'))
+  or public.user_owns_event(event_id)
 );
 
 drop policy if exists "Users can delete invitations for their events" on public.invitations;
@@ -146,11 +194,17 @@ on public.invitations
 for delete
 to authenticated
 using (
-  exists (
-    select 1 from public.events
-    where events.id = invitations.event_id
-    and events.created_by = (select auth.uid())
-  )
+  public.user_owns_event(event_id)
+);
+
+drop policy if exists "Users can read their own events" on public.events;
+create policy "Users can read their own events"
+on public.events
+for select
+to authenticated
+using (
+  created_by = (select auth.uid())
+  or public.user_is_invited_to_event(id)
 );
 
 create table if not exists public.expenses (
@@ -167,6 +221,20 @@ create table if not exists public.expenses (
 
 alter table public.expenses enable row level security;
 
+create or replace function public.user_owns_expense(target_expense_id uuid)
+returns boolean
+language sql
+security definer
+set search_path = public
+as $$
+  select exists (
+    select 1
+    from public.expenses
+    where expenses.id = target_expense_id
+    and public.user_can_contribute_to_event(expenses.event_id)
+  );
+$$;
+
 drop policy if exists "Users can read expenses for their events" on public.expenses;
 create policy "Users can read expenses for their events"
 on public.expenses
@@ -174,11 +242,7 @@ for select
 to authenticated
 using (
   created_by = (select auth.uid())
-  or exists (
-    select 1 from public.events
-    where events.id = expenses.event_id
-    and events.created_by = (select auth.uid())
-  )
+  or public.user_can_contribute_to_event(event_id)
 );
 
 drop policy if exists "Users can create expenses for their events" on public.expenses;
@@ -188,11 +252,7 @@ for insert
 to authenticated
 with check (
   created_by = (select auth.uid())
-  and exists (
-    select 1 from public.events
-    where events.id = expenses.event_id
-    and events.created_by = (select auth.uid())
-  )
+  and public.user_can_contribute_to_event(event_id)
 );
 
 drop policy if exists "Users can update expenses for their events" on public.expenses;
@@ -201,18 +261,10 @@ on public.expenses
 for update
 to authenticated
 using (
-  exists (
-    select 1 from public.events
-    where events.id = expenses.event_id
-    and events.created_by = (select auth.uid())
-  )
+  public.user_can_contribute_to_event(event_id)
 )
 with check (
-  exists (
-    select 1 from public.events
-    where events.id = expenses.event_id
-    and events.created_by = (select auth.uid())
-  )
+  public.user_can_contribute_to_event(event_id)
 );
 
 drop policy if exists "Users can delete expenses for their events" on public.expenses;
@@ -221,11 +273,7 @@ on public.expenses
 for delete
 to authenticated
 using (
-  exists (
-    select 1 from public.events
-    where events.id = expenses.event_id
-    and events.created_by = (select auth.uid())
-  )
+  public.user_can_contribute_to_event(event_id)
 );
 
 create table if not exists public.expense_participants (
@@ -244,13 +292,7 @@ on public.expense_participants
 for select
 to authenticated
 using (
-  exists (
-    select 1
-    from public.expenses
-    join public.events on events.id = expenses.event_id
-    where expenses.id = expense_participants.expense_id
-    and events.created_by = (select auth.uid())
-  )
+  public.user_owns_expense(expense_id)
 );
 
 drop policy if exists "Users can create participants for their expenses" on public.expense_participants;
@@ -259,13 +301,7 @@ on public.expense_participants
 for insert
 to authenticated
 with check (
-  exists (
-    select 1
-    from public.expenses
-    join public.events on events.id = expenses.event_id
-    where expenses.id = expense_participants.expense_id
-    and events.created_by = (select auth.uid())
-  )
+  public.user_owns_expense(expense_id)
 );
 
 drop policy if exists "Users can update participants for their expenses" on public.expense_participants;
@@ -274,22 +310,10 @@ on public.expense_participants
 for update
 to authenticated
 using (
-  exists (
-    select 1
-    from public.expenses
-    join public.events on events.id = expenses.event_id
-    where expenses.id = expense_participants.expense_id
-    and events.created_by = (select auth.uid())
-  )
+  public.user_owns_expense(expense_id)
 )
 with check (
-  exists (
-    select 1
-    from public.expenses
-    join public.events on events.id = expenses.event_id
-    where expenses.id = expense_participants.expense_id
-    and events.created_by = (select auth.uid())
-  )
+  public.user_owns_expense(expense_id)
 );
 
 drop policy if exists "Users can delete participants for their expenses" on public.expense_participants;
@@ -298,11 +322,5 @@ on public.expense_participants
 for delete
 to authenticated
 using (
-  exists (
-    select 1
-    from public.expenses
-    join public.events on events.id = expenses.event_id
-    where expenses.id = expense_participants.expense_id
-    and events.created_by = (select auth.uid())
-  )
+  public.user_owns_expense(expense_id)
 );

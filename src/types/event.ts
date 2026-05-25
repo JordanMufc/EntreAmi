@@ -15,16 +15,22 @@ export interface CreateEventInput {
   time: string;
   location: string;
   description: string;
+  invitedFriends?: {
+    name: string;
+    email: string;
+  }[];
 }
 
 export type InvitationStatus = 'pending' | 'accepted' | 'declined';
 
-export type FriendStatus = 'invited' | 'accepted';
+export type FriendStatus = 'invited' | 'accepted' | 'declined';
 
 export interface Friend {
   id: string;
   name: string;
   email: string;
+  requesterName: string;
+  requesterEmail: string;
   status: FriendStatus;
   createdBy: string;
   createdAt: string;

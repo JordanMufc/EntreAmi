@@ -11,6 +11,7 @@ import {
 } from 'react-native';
 
 import { BackToHomeButton } from '@/components/back-to-home-button';
+import { useAuth } from '@/src/context/auth-context';
 import { useEvents } from '@/src/context/events-context';
 import { InvitationStatus } from '@/src/types/event';
 
@@ -21,6 +22,7 @@ const statusLabels: Record<InvitationStatus, string> = {
 };
 
 export default function InvitationsScreen() {
+  const { user } = useAuth();
   const { createInvitation, events, invitations, updateInvitationStatus } = useEvents();
   const [selectedEventId, setSelectedEventId] = useState('');
   const [name, setName] = useState('');
@@ -29,12 +31,28 @@ export default function InvitationsScreen() {
 
   const activeEventId = selectedEventId || events[0]?.id || '';
   const selectedEvent = events.find((event) => event.id === activeEventId);
+  const eventTitleById = useMemo(
+    () => new Map(events.map((event) => [event.id, event.title])),
+    [events],
+  );
+  const receivedInvitations = useMemo(
+    () =>
+      invitations.filter(
+        (invitation) =>
+          invitation.email.toLowerCase() === user?.email.toLowerCase() &&
+          invitation.createdBy !== user.id &&
+          invitation.status === 'pending',
+      ),
+    [invitations, user],
+  );
   const visibleInvitations = useMemo(
     () =>
       activeEventId
-        ? invitations.filter((invitation) => invitation.eventId === activeEventId)
-        : invitations,
-    [activeEventId, invitations],
+        ? invitations.filter(
+            (invitation) => invitation.eventId === activeEventId && invitation.createdBy === user?.id,
+          )
+        : invitations.filter((invitation) => invitation.createdBy === user?.id),
+    [activeEventId, invitations, user],
   );
 
   const resetForm = () => {
@@ -80,12 +98,77 @@ export default function InvitationsScreen() {
       <View style={styles.header}>
         <Text style={styles.title}>Invitations</Text>
         <Text style={styles.subtitle}>
-          Ajoutez les participants à un événement et suivez leur réponse.
+          Répondez aux invitations reçues et suivez celles que vous envoyez.
         </Text>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Événement</Text>
+        <Text style={styles.sectionTitle}>Notifications reçues</Text>
+        <FlatList
+          contentContainerStyle={receivedInvitations.length === 0 ? styles.emptyList : styles.list}
+          data={receivedInvitations}
+          keyExtractor={(invitation) => invitation.id}
+          ListEmptyComponent={
+            <View style={styles.card}>
+              <Text style={styles.cardTitle}>Aucune invitation reçue</Text>
+              <Text style={styles.cardText}>
+                Les invitations à des événements apparaîtront ici.
+              </Text>
+            </View>
+          }
+          renderItem={({ item }) => (
+            <View style={styles.invitationCard}>
+              <View style={styles.invitationHeader}>
+                <View style={styles.invitationIdentity}>
+                  <Text style={styles.cardTitle}>
+                    {eventTitleById.get(item.eventId) ?? 'Événement'}
+                  </Text>
+                  <Text style={styles.cardText}>Invitation pour {item.name || item.email}</Text>
+                </View>
+                <Text style={styles.status}>{statusLabels[item.status]}</Text>
+              </View>
+
+              <View style={styles.statusActions}>
+                <Pressable
+                  onPress={() => handleStatusChange(item.id, 'accepted')}
+                  style={({ pressed }) => [
+                    styles.statusButton,
+                    item.status === 'accepted' && styles.statusButtonActive,
+                    pressed && styles.pressed,
+                  ]}>
+                  <Text
+                    style={[
+                      styles.statusButtonText,
+                      item.status === 'accepted' && styles.statusButtonTextActive,
+                    ]}>
+                    Accepter
+                  </Text>
+                </Pressable>
+
+                <Pressable
+                  onPress={() => handleStatusChange(item.id, 'declined')}
+                  style={({ pressed }) => [
+                    styles.statusButton,
+                    item.status === 'declined' && styles.statusButtonDanger,
+                    pressed && styles.pressed,
+                  ]}>
+                  <Text
+                    style={[
+                      styles.statusButtonText,
+                      item.status === 'declined' && styles.statusButtonDangerText,
+                    ]}>
+                    Refuser
+                  </Text>
+                </Pressable>
+              </View>
+            </View>
+          )}
+          scrollEnabled={false}
+        />
+      </View>
+
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>Invitations envoyées</Text>
         {events.length > 0 ? (
           <View style={styles.eventList}>
             {events.map((event) => (
@@ -159,7 +242,7 @@ export default function InvitationsScreen() {
       ) : null}
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Invités</Text>
+        <Text style={styles.sectionTitle}>Invités de l’événement</Text>
         <FlatList
           contentContainerStyle={visibleInvitations.length === 0 ? styles.emptyList : styles.list}
           data={visibleInvitations}
@@ -356,12 +439,19 @@ const styles = StyleSheet.create({
     borderColor: '#0a7ea4',
     backgroundColor: '#e8f6fa',
   },
+  statusButtonDanger: {
+    borderColor: '#b42318',
+    backgroundColor: '#fff0ee',
+  },
   statusButtonText: {
     fontWeight: '700',
     color: '#52616f',
   },
   statusButtonTextActive: {
     color: '#0a7ea4',
+  },
+  statusButtonDangerText: {
+    color: '#b42318',
   },
   pressed: {
     opacity: 0.8,

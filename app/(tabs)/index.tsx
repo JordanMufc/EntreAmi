@@ -30,14 +30,6 @@ const features = [
     route: '/(tabs)/invitations',
   },
   {
-    title: 'Dépenses',
-    description: 'Frais partagés',
-    icon: 'creditcard.fill',
-    accent: '#147d64',
-    background: '#e8f6f1',
-    route: '/(tabs)/expenses',
-  },
-  {
     title: 'Soldes',
     description: 'Remboursements',
     icon: 'arrow.left.arrow.right',

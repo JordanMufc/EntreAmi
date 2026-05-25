@@ -19,16 +19,26 @@ export default function RegisterScreen() {
   const [username, setUsername] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [feedbackMessage, setFeedbackMessage] = useState('');
+  const [feedbackType, setFeedbackType] = useState<'error' | 'success'>('error');
   const [loading, setLoading] = useState(false);
 
   const handleRegister = async () => {
+    setFeedbackMessage('');
+
     if (!username.trim() || !email.trim() || !password) {
-      Alert.alert('Inscription impossible', 'Veuillez remplir tous les champs.');
+      const message = 'Veuillez remplir tous les champs.';
+      setFeedbackType('error');
+      setFeedbackMessage(message);
+      Alert.alert('Inscription impossible', message);
       return;
     }
 
     if (password.length < 6) {
-      Alert.alert('Inscription impossible', 'Le mot de passe doit contenir au moins 6 caractères.');
+      const message = 'Le mot de passe doit contenir au moins 6 caractères.';
+      setFeedbackType('error');
+      setFeedbackMessage(message);
+      Alert.alert('Inscription impossible', message);
       return;
     }
 
@@ -38,17 +48,26 @@ export default function RegisterScreen() {
       const result = await register({ username, email, password });
 
       if (result.requiresEmailConfirmation) {
+        setFeedbackType('success');
+        setFeedbackMessage('Compte créé. Confirmez votre email avant de vous connecter.');
         Alert.alert(
           'Compte créé',
           'Confirmez votre email avant de vous connecter.',
         );
-        router.replace('/login');
+        setTimeout(() => {
+          router.replace('/login');
+        }, 1200);
         return;
       }
 
+      setFeedbackType('success');
+      setFeedbackMessage('Compte créé. Connexion en cours...');
       router.replace('/(tabs)');
     } catch (error) {
-      Alert.alert('Inscription impossible', error instanceof Error ? error.message : 'Réessayez.');
+      const message = error instanceof Error ? error.message : 'Réessayez.';
+      setFeedbackType('error');
+      setFeedbackMessage(message);
+      Alert.alert('Inscription impossible', message);
     } finally {
       setLoading(false);
     }
@@ -113,6 +132,14 @@ export default function RegisterScreen() {
               <Text style={styles.buttonText}>Créer mon compte</Text>
             )}
           </Pressable>
+
+          {feedbackMessage ? (
+            <Text
+              accessibilityLiveRegion="polite"
+              style={[styles.feedbackText, feedbackType === 'success' && styles.successText]}>
+              {feedbackMessage}
+            </Text>
+          ) : null}
         </View>
 
         <View style={styles.footer}>
@@ -193,6 +220,15 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700',
     color: '#fff',
+  },
+  feedbackText: {
+    color: '#b42318',
+    fontSize: 14,
+    lineHeight: 20,
+    textAlign: 'center',
+  },
+  successText: {
+    color: '#147d64',
   },
   footer: {
     flexDirection: 'row',
