@@ -12,6 +12,12 @@ import {
 import { BackToHomeButton } from "@/components/back-to-home-button";
 import { useAuth } from "@/src/presentation/auth/auth-context";
 import { useEvents } from "@/src/presentation/events/events-context";
+import {
+  formatFrenchDateInput,
+  getDateSortValue,
+  isFrenchDate,
+  parseFrenchDate,
+} from "@/src/domain/events/date-format";
 import { Event, Friend, Invitation } from "@/src/domain/events/entities";
 
 function getAcceptedParticipants(eventId: string, invitations: Invitation[]) {
@@ -97,11 +103,11 @@ function getFriendContact(friend: Friend, currentUserId?: string) {
 }
 
 function getCalendarDay(date: string) {
-  const [, month = "", day = ""] = date.split("-");
+  const parsedDate = parseFrenchDate(date);
 
   return {
-    day: day || date,
-    month: month || "",
+    day: parsedDate?.day ?? date,
+    month: parsedDate?.month ?? "",
   };
 }
 
@@ -170,9 +176,8 @@ export default function CalendarScreen() {
           );
         })
         .sort((firstEvent, secondEvent) =>
-          `${firstEvent.date} ${firstEvent.time}`.localeCompare(
-            `${secondEvent.date} ${secondEvent.time}`,
-          ),
+          getDateSortValue(firstEvent.date, firstEvent.time) -
+          getDateSortValue(secondEvent.date, secondEvent.time),
         ),
     [events, invitations, user],
   );
@@ -310,6 +315,11 @@ export default function CalendarScreen() {
         "Dépense impossible",
         "Renseignez le titre, le montant, le payeur et la date.",
       );
+      return;
+    }
+
+    if (!isFrenchDate(expenseDate)) {
+      Alert.alert("Dépense impossible", "La date doit être au format JJ/MM/AAAA.");
       return;
     }
 
@@ -656,8 +666,10 @@ export default function CalendarScreen() {
                       <View style={[styles.field, styles.rowField]}>
                         <Text style={styles.label}>Date</Text>
                         <TextInput
-                          onChangeText={setExpenseDate}
-                          placeholder="2026-06-20"
+                          keyboardType="number-pad"
+                          maxLength={10}
+                          onChangeText={(value) => setExpenseDate(formatFrenchDateInput(value))}
+                          placeholder="JJ/MM/AAAA"
                           style={styles.input}
                           value={expenseDate}
                         />

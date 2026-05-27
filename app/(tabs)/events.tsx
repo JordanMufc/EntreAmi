@@ -14,6 +14,7 @@ import {
 import { BackToHomeButton } from '@/components/back-to-home-button';
 import { useAuth } from '@/src/presentation/auth/auth-context';
 import { useEvents } from '@/src/presentation/events/events-context';
+import { formatFrenchDateInput, isFrenchDate } from '@/src/domain/events/date-format';
 import { Friend } from '@/src/domain/events/entities';
 
 function getFriendContact(friend: Friend, currentUserId?: string) {
@@ -87,6 +88,14 @@ export default function EventsScreen() {
       return;
     }
 
+    if (!isFrenchDate(date)) {
+      const validationMessage = 'La date doit être au format JJ/MM/AAAA.';
+      setMessageType('error');
+      setMessage(validationMessage);
+      Alert.alert('Création impossible', validationMessage);
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -142,8 +151,10 @@ export default function EventsScreen() {
             <View style={[styles.field, styles.rowField]}>
               <Text style={styles.label}>Date</Text>
               <TextInput
-                onChangeText={setDate}
-                placeholder="2026-06-20"
+                keyboardType="number-pad"
+                maxLength={10}
+                onChangeText={(value) => setDate(formatFrenchDateInput(value))}
+                placeholder="JJ/MM/AAAA"
                 style={styles.input}
                 value={date}
               />
