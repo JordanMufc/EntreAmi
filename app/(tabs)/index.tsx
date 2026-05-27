@@ -1,58 +1,71 @@
-import { router } from 'expo-router';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { router } from "expo-router";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
-import { IconSymbol } from '@/components/ui/icon-symbol';
-import { useAuth } from '@/src/context/auth-context';
+import { IconSymbol } from "@/components/ui/icon-symbol";
+import { useAuth } from "@/src/presentation/auth/auth-context";
 
 const features = [
   {
-    title: 'Événements',
-    description: 'Créer et suivre',
-    icon: 'calendar.badge.plus',
-    accent: '#0a7ea4',
-    background: '#e8f6fa',
-    route: '/(tabs)/events',
+    title: "Créer",
+    description: "Nouvel événement",
+    icon: "calendar.badge.plus",
+    accent: "#0a7ea4",
+    background: "#e8f6fa",
+    route: "/(tabs)/events",
   },
   {
-    title: 'Mes amis',
-    description: 'Carnet d’invités',
-    icon: 'person.badge.plus',
-    accent: '#8a3ffc',
-    background: '#f2edff',
-    route: '/(tabs)/friends',
+    title: "Calendrier",
+    description: "Événements acceptés",
+    icon: "calendar",
+    accent: "#147d64",
+    background: "#e9f8f3",
+    route: "/(tabs)/calendar",
   },
   {
-    title: 'Invitations',
-    description: 'Participants',
-    icon: 'person.2.fill',
-    accent: '#6f52ed',
-    background: '#f0edff',
-    route: '/(tabs)/invitations',
+    title: "Mes amis",
+    description: "Carnet d’invités",
+    icon: "person.badge.plus",
+    accent: "#8a3ffc",
+    background: "#f2edff",
+    route: "/(tabs)/friends",
   },
   {
-    title: 'Soldes',
-    description: 'Remboursements',
-    icon: 'arrow.left.arrow.right',
-    accent: '#b65f12',
-    background: '#fff3e6',
-    route: '/(tabs)/balances',
+    title: "Invitations",
+    description: "Participants",
+    icon: "person.2.fill",
+    accent: "#6f52ed",
+    background: "#f0edff",
+    route: "/(tabs)/invitations",
+  },
+  {
+    title: "Soldes",
+    description: "Remboursements",
+    icon: "arrow.left.arrow.right",
+    accent: "#b65f12",
+    background: "#fff3e6",
+    route: "/(tabs)/balances",
+  },
+  {
+    title: "Profil",
+    description: "Nom et banque",
+    icon: "person.fill",
+    accent: "#4f6f52",
+    background: "#eef6ef",
+    route: "/(tabs)/profile",
   },
 ] as const;
 
 export default function HomeScreen() {
-  const { logout, user } = useAuth();
+  const { logout } = useAuth();
 
   return (
     <ScrollView contentContainerStyle={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.title}>Bonjour {user?.username}</Text>
-        <Text style={styles.subtitle}>
-          Accédez rapidement aux outils pour organiser vos événements.
-        </Text>
+        <Text style={styles.title}>SplitEvent</Text>
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Fonctionnalités</Text>
+        <Text style={styles.sectionTitle}>Acceuil</Text>
         <View style={styles.featureGrid}>
           {features.map((feature) => (
             <Pressable
@@ -62,8 +75,11 @@ export default function HomeScreen() {
                 styles.featureTile,
                 { backgroundColor: feature.background },
                 pressed && styles.pressed,
-              ]}>
-              <View style={[styles.iconFrame, { backgroundColor: feature.accent }]}>
+              ]}
+            >
+              <View
+                style={[styles.iconFrame, { backgroundColor: feature.accent }]}
+              >
                 <IconSymbol name={feature.icon} size={28} color="#fff" />
               </View>
               <View style={styles.featureTextGroup}>
@@ -75,7 +91,10 @@ export default function HomeScreen() {
         </View>
       </View>
 
-      <Pressable onPress={logout} style={({ pressed }) => [styles.button, pressed && styles.pressed]}>
+      <Pressable
+        onPress={logout}
+        style={({ pressed }) => [styles.button, pressed && styles.pressed]}
+      >
         <Text style={styles.buttonText}>Se déconnecter</Text>
       </Pressable>
     </ScrollView>
@@ -88,42 +107,41 @@ const styles = StyleSheet.create({
     padding: 24,
     paddingTop: 72,
     paddingBottom: 32,
-    backgroundColor: '#f5f7fb',
+    backgroundColor: "#f5f7fb",
   },
   header: {
     gap: 8,
   },
   title: {
     fontSize: 30,
-    fontWeight: '700',
-    color: '#123047',
+    fontWeight: "700",
+    color: "#123047",
   },
   subtitle: {
     fontSize: 16,
-    color: '#52616f',
+    color: "#52616f",
   },
   section: {
     gap: 12,
   },
   sectionTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#25313b',
+    fontWeight: "700",
+    color: "#25313b",
   },
   featureGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
+    flexDirection: "row",
+    flexWrap: "wrap",
     gap: 12,
   },
   featureTile: {
     aspectRatio: 1,
-    flexBasis: '48%',
-    flexGrow: 1,
+    width: "48%",
     minWidth: 148,
-    justifyContent: 'space-between',
+    justifyContent: "space-between",
     padding: 16,
     borderRadius: 8,
-    shadowColor: '#000',
+    shadowColor: "#000",
     shadowOpacity: 0.06,
     shadowRadius: 12,
     shadowOffset: { width: 0, height: 6 },
@@ -132,8 +150,8 @@ const styles = StyleSheet.create({
   iconFrame: {
     width: 48,
     height: 48,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     borderRadius: 8,
   },
   featureTextGroup: {
@@ -141,27 +159,27 @@ const styles = StyleSheet.create({
   },
   featureTitle: {
     fontSize: 18,
-    fontWeight: '700',
-    color: '#123047',
+    fontWeight: "700",
+    color: "#123047",
   },
   featureText: {
     fontSize: 14,
     lineHeight: 19,
-    color: '#52616f',
+    color: "#52616f",
   },
   button: {
     minHeight: 50,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     borderRadius: 8,
-    backgroundColor: '#c93535',
+    backgroundColor: "#c93535",
   },
   pressed: {
     opacity: 0.8,
   },
   buttonText: {
     fontSize: 16,
-    fontWeight: '700',
-    color: '#fff',
+    fontWeight: "700",
+    color: "#fff",
   },
 });

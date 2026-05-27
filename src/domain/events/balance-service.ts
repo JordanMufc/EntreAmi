@@ -1,4 +1,4 @@
-import { BalanceLine, Event, Expense } from '@/src/types/event';
+import { BalanceLine, Event, Expense, Repayment } from './entities';
 
 interface BalanceParticipant {
   key: string;
@@ -100,4 +100,37 @@ export function calculateBalances(events: Event[], expenses: Expense[]): Balance
   }
 
   return balances;
+}
+
+export function getRepaymentKey(balance: Pick<BalanceLine | Repayment, 'eventId' | 'from' | 'to'>) {
+  return [
+    balance.eventId,
+    balance.from.trim().toLowerCase(),
+    balance.to.trim().toLowerCase(),
+  ].join(':');
+}
+
+export function calculateOutstandingBalances(
+  events: Event[],
+  expenses: Expense[],
+  repayments: Repayment[],
+) {
+  const repaidAmountByKey = new Map<string, number>();
+
+  for (const repayment of repayments) {
+    const key = getRepaymentKey(repayment);
+    repaidAmountByKey.set(key, (repaidAmountByKey.get(key) ?? 0) + repayment.amount);
+  }
+
+  return calculateBalances(events, expenses)
+    .map((balance) => {
+      const repaidAmount = repaidAmountByKey.get(getRepaymentKey(balance)) ?? 0;
+      const remainingAmount = Math.round((balance.amount - repaidAmount) * 100) / 100;
+
+      return {
+        ...balance,
+        amount: remainingAmount,
+      };
+    })
+    .filter((balance) => balance.amount > 0.005);
 }

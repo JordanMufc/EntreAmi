@@ -100,3 +100,14 @@ export interface BalanceLine {
   to: string;
   amount: number;
 }
+
+export interface Repayment {
+  id: string;
+  eventId: string;
+  eventTitle: string;
+  from: string;
+  to: string;
+  amount: number;
+  createdBy: string;
+  createdAt: string;
+}

@@ -11,9 +11,9 @@ import {
 } from 'react-native';
 
 import { BackToHomeButton } from '@/components/back-to-home-button';
-import { useAuth } from '@/src/context/auth-context';
-import { useEvents } from '@/src/context/events-context';
-import { Friend, FriendStatus } from '@/src/types/event';
+import { useAuth } from '@/src/presentation/auth/auth-context';
+import { useEvents } from '@/src/presentation/events/events-context';
+import { Friend, FriendStatus } from '@/src/domain/events/entities';
 
 const statusLabels = {
   invited: 'Invité',

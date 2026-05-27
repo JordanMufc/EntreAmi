@@ -11,9 +11,9 @@ import {
 } from 'react-native';
 
 import { BackToHomeButton } from '@/components/back-to-home-button';
-import { useAuth } from '@/src/context/auth-context';
-import { useEvents } from '@/src/context/events-context';
-import { InvitationStatus } from '@/src/types/event';
+import { useAuth } from '@/src/presentation/auth/auth-context';
+import { useEvents } from '@/src/presentation/events/events-context';
+import { InvitationStatus } from '@/src/domain/events/entities';
 
 const statusLabels: Record<InvitationStatus, string> = {
   pending: 'En attente',

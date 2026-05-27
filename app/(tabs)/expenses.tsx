@@ -11,7 +11,7 @@ import {
 } from 'react-native';
 
 import { BackToHomeButton } from '@/components/back-to-home-button';
-import { useEvents } from '@/src/context/events-context';
+import { useEvents } from '@/src/presentation/events/events-context';
 
 function parseParticipants(value: string) {
   return value

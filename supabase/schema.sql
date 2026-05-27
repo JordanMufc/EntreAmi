@@ -337,3 +337,45 @@ to authenticated
 using (
   public.user_owns_expense(expense_id)
 );
+
+create table if not exists public.repayments (
+  id uuid primary key default gen_random_uuid(),
+  event_id uuid not null references public.events(id) on delete cascade,
+  event_title text not null,
+  payer_name text not null,
+  recipient_name text not null,
+  amount numeric(12, 2) not null check (amount > 0),
+  created_by uuid not null references auth.users(id) on delete cascade,
+  created_at timestamptz not null default now()
+);
+
+alter table public.repayments enable row level security;
+
+drop policy if exists "Users can read repayments for their events" on public.repayments;
+create policy "Users can read repayments for their events"
+on public.repayments
+for select
+to authenticated
+using (
+  created_by = (select auth.uid())
+  or public.user_can_contribute_to_event(event_id)
+);
+
+drop policy if exists "Users can create repayments for their events" on public.repayments;
+create policy "Users can create repayments for their events"
+on public.repayments
+for insert
+to authenticated
+with check (
+  created_by = (select auth.uid())
+  and public.user_can_contribute_to_event(event_id)
+);
+
+drop policy if exists "Users can delete repayments for their events" on public.repayments;
+create policy "Users can delete repayments for their events"
+on public.repayments
+for delete
+to authenticated
+using (
+  public.user_can_contribute_to_event(event_id)
+);

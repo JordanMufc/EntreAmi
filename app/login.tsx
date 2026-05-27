@@ -12,7 +12,7 @@ import {
   View,
 } from "react-native";
 
-import { useAuth } from "@/src/context/auth-context";
+import { useAuth } from "@/src/presentation/auth/auth-context";
 
 export default function LoginScreen() {
   const { login } = useAuth();

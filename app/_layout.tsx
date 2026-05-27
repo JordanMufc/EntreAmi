@@ -4,8 +4,8 @@ import { StatusBar } from 'expo-status-bar';
 import 'react-native-reanimated';
 
 import { useColorScheme } from '@/hooks/use-color-scheme';
-import { AuthProvider } from '@/src/context/auth-context';
-import { EventsProvider } from '@/src/context/events-context';
+import { AuthProvider } from '@/src/presentation/auth/auth-context';
+import { EventsProvider } from '@/src/presentation/events/events-context';
 
 export const unstable_settings = {
   anchor: 'login',

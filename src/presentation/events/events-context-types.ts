@@ -10,7 +10,8 @@ import {
   FriendStatus,
   Invitation,
   InvitationStatus,
-} from '@/src/types/event';
+  Repayment,
+} from '@/src/domain/events/entities';
 
 export interface EventsContextValue {
   events: Event[];
@@ -19,6 +20,7 @@ export interface EventsContextValue {
   invitations: Invitation[];
   expenses: Expense[];
   balances: BalanceLine[];
+  repayments: Repayment[];
   loading: boolean;
   createEvent: (input: CreateEventInput) => Promise<void>;
   deleteEvent: (id: string) => Promise<void>;
@@ -28,5 +30,6 @@ export interface EventsContextValue {
   createInvitation: (input: CreateInvitationInput) => Promise<void>;
   updateInvitationStatus: (id: string, status: InvitationStatus) => Promise<void>;
   createExpense: (input: CreateExpenseInput) => Promise<void>;
+  markBalanceAsRepaid: (balance: BalanceLine) => Promise<void>;
   refreshEvents: () => Promise<void>;
 }

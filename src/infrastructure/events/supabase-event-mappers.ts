@@ -6,7 +6,8 @@ import {
   FriendStatus,
   Invitation,
   InvitationStatus,
-} from '@/src/types/event';
+  Repayment,
+} from '@/src/domain/events/entities';
 
 export interface EventRow {
   id: string;
@@ -59,6 +60,17 @@ export interface ExpenseParticipantRow {
   expense_id: string;
   name: string;
   email: string | null;
+}
+
+export interface RepaymentRow {
+  id: string;
+  event_id: string;
+  event_title: string;
+  payer_name: string;
+  recipient_name: string;
+  amount: number | string;
+  created_by: string;
+  created_at: string;
 }
 
 export function toEvent(row: EventRow): Event {
@@ -122,6 +134,19 @@ export function toParticipant(row: ExpenseParticipantRow): ExpenseParticipant {
     expenseId: row.expense_id,
     name: row.name,
     email: row.email ?? '',
+  };
+}
+
+export function toRepayment(row: RepaymentRow): Repayment {
+  return {
+    id: row.id,
+    eventId: row.event_id,
+    eventTitle: row.event_title,
+    from: row.payer_name,
+    to: row.recipient_name,
+    amount: Number(row.amount),
+    createdBy: row.created_by,
+    createdAt: row.created_at,
   };
 }
 

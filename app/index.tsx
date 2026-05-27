@@ -1,7 +1,7 @@
 import { Redirect } from "expo-router";
 import { ActivityIndicator, View } from "react-native";
 
-import { useAuth } from "@/src/context/auth-context";
+import { useAuth } from "@/src/presentation/auth/auth-context";
 
 export default function IndexScreen() {
   const { loading, user } = useAuth();

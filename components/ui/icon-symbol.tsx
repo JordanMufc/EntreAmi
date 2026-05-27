@@ -14,10 +14,12 @@ type IconSymbolName = keyof typeof MAPPING;
  * - see SF Symbols in the [SF Symbols](https://developer.apple.com/sf-symbols/) app.
  */
 const MAPPING = {
+  calendar: 'calendar-month',
   'calendar.badge.plus': 'event',
   'creditcard.fill': 'credit-card',
   'house.fill': 'home',
   'person.badge.plus': 'person-add',
+  'person.fill': 'person',
   'person.2.fill': 'group',
   'paperplane.fill': 'send',
   'arrow.left.arrow.right': 'compare-arrows',
