@@ -13,6 +13,7 @@ import {
 import { BackToHomeButton } from '@/components/back-to-home-button';
 import { useAuth } from '@/src/presentation/auth/auth-context';
 import { useEvents } from '@/src/presentation/events/events-context';
+import { useEventsRefreshControl } from '@/src/presentation/events/use-events-refresh-control';
 import { Friend, FriendStatus } from '@/src/domain/events/entities';
 
 const statusLabels = {
@@ -39,6 +40,7 @@ export default function FriendsScreen() {
   const { user } = useAuth();
   const { createFriend, deleteFriend, friends, onlineFriendEmails, updateFriendStatus } =
     useEvents();
+  const refreshControl = useEventsRefreshControl();
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [loading, setLoading] = useState(false);
@@ -133,7 +135,7 @@ export default function FriendsScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView contentContainerStyle={styles.container} refreshControl={refreshControl}>
       <BackToHomeButton />
 
       <View style={styles.header}>

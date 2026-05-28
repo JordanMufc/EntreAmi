@@ -3,6 +3,7 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
 
 import { IconSymbol } from "@/components/ui/icon-symbol";
 import { useAuth } from "@/src/presentation/auth/auth-context";
+import { useEventsRefreshControl } from "@/src/presentation/events/use-events-refresh-control";
 
 const features = [
   {
@@ -57,9 +58,10 @@ const features = [
 
 export default function HomeScreen() {
   const { logout } = useAuth();
+  const refreshControl = useEventsRefreshControl();
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView contentContainerStyle={styles.container} refreshControl={refreshControl}>
       <View style={styles.header}>
         <Text style={styles.title}>SplitEvent</Text>
       </View>

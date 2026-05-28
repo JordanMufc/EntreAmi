@@ -12,6 +12,7 @@ import {
 
 import { BackToHomeButton } from '@/components/back-to-home-button';
 import { useEvents } from '@/src/presentation/events/events-context';
+import { useEventsRefreshControl } from '@/src/presentation/events/use-events-refresh-control';
 
 function parseParticipants(value: string) {
   return value
@@ -30,6 +31,7 @@ function parseParticipants(value: string) {
 
 export default function ExpensesScreen() {
   const { createExpense, events, expenses, invitations } = useEvents();
+  const refreshControl = useEventsRefreshControl();
   const [selectedEventId, setSelectedEventId] = useState('');
   const [title, setTitle] = useState('');
   const [amount, setAmount] = useState('');
@@ -107,7 +109,7 @@ export default function ExpensesScreen() {
   };
 
   return (
-    <ScrollView contentContainerStyle={styles.container}>
+    <ScrollView contentContainerStyle={styles.container} refreshControl={refreshControl}>
       <BackToHomeButton />
 
       <View style={styles.header}>

@@ -3,10 +3,12 @@ import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native
 
 import { BackToHomeButton } from '@/components/back-to-home-button';
 import { useEvents } from '@/src/presentation/events/events-context';
+import { useEventsRefreshControl } from '@/src/presentation/events/use-events-refresh-control';
 import { BalanceLine } from '@/src/domain/events/entities';
 
 export default function BalancesScreen() {
   const { balances, expenses, markBalanceAsRepaid, repayments } = useEvents();
+  const refreshControl = useEventsRefreshControl();
   const [confirmingBalanceId, setConfirmingBalanceId] = useState<string | null>(null);
   const [savingBalanceId, setSavingBalanceId] = useState<string | null>(null);
 
@@ -45,6 +47,7 @@ export default function BalancesScreen() {
         contentContainerStyle={balances.length === 0 ? styles.emptyList : styles.list}
         data={balances}
         keyExtractor={(balance) => balance.id}
+        refreshControl={refreshControl}
         ListEmptyComponent={
           <View style={styles.card}>
             <Text style={styles.cardTitle}>

@@ -14,6 +14,7 @@ import {
 import { BackToHomeButton } from '@/components/back-to-home-button';
 import { useAuth } from '@/src/presentation/auth/auth-context';
 import { useEvents } from '@/src/presentation/events/events-context';
+import { useEventsRefreshControl } from '@/src/presentation/events/use-events-refresh-control';
 import { formatFrenchDateInput, isFrenchDate } from '@/src/domain/events/date-format';
 import { Friend } from '@/src/domain/events/entities';
 
@@ -34,6 +35,7 @@ function getFriendContact(friend: Friend, currentUserId?: string) {
 export default function EventsScreen() {
   const { user } = useAuth();
   const { createEvent, friends } = useEvents();
+  const refreshControl = useEventsRefreshControl();
   const [selectedFriendIds, setSelectedFriendIds] = useState<string[]>([]);
   const [title, setTitle] = useState('');
   const [date, setDate] = useState('');
@@ -126,7 +128,10 @@ export default function EventsScreen() {
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.scrollContent} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={styles.scrollContent}
+        keyboardShouldPersistTaps="handled"
+        refreshControl={refreshControl}>
         <BackToHomeButton />
 
         <View style={styles.header}>

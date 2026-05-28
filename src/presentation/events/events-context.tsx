@@ -1,4 +1,5 @@
-import { createContext, PropsWithChildren, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { createContext, PropsWithChildren, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { AppState } from 'react-native';
 
 import { createEventsUseCases } from '@/src/application/events/events-use-cases';
 import { useAuth } from '@/src/presentation/auth/auth-context';
@@ -6,6 +7,7 @@ import { calculateOutstandingBalances } from '@/src/domain/events/balance-servic
 import { Event, Expense, Friend, Invitation, Repayment } from '@/src/domain/events/entities';
 import { EventsContextValue } from '@/src/presentation/events/events-context-types';
 import { supabaseEventsRepository } from '@/src/infrastructure/events/supabase-events-repository';
+import { subscribeToEventsDataChanges } from '@/src/infrastructure/realtime/supabase-data-changes';
 import { useOnlineFriends } from '@/src/presentation/realtime/use-online-friends';
 
 const EventsContext = createContext<EventsContextValue | null>(null);
@@ -19,6 +21,7 @@ export function EventsProvider({ children }: PropsWithChildren) {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [repayments, setRepayments] = useState<Repayment[]>([]);
   const [loading, setLoading] = useState(false);
+  const refreshingRef = useRef(false);
   const onlineFriendEmails = useOnlineFriends(user);
 
   const clearData = useCallback(() => {
@@ -29,13 +32,21 @@ export function EventsProvider({ children }: PropsWithChildren) {
     setRepayments([]);
   }, []);
 
-  const refreshEvents = useCallback(async () => {
+  const refreshEvents = useCallback(async (options?: { silent?: boolean }) => {
     if (!user) {
       clearData();
       return;
     }
 
-    setLoading(true);
+    if (options?.silent && refreshingRef.current) {
+      return;
+    }
+
+    refreshingRef.current = true;
+
+    if (!options?.silent) {
+      setLoading(true);
+    }
 
     try {
       const nextData = await eventsUseCases.loadEventsData();
@@ -46,13 +57,58 @@ export function EventsProvider({ children }: PropsWithChildren) {
       setExpenses(nextData.expenses);
       setRepayments(nextData.repayments);
     } finally {
-      setLoading(false);
+      if (!options?.silent) {
+        setLoading(false);
+      }
+
+      refreshingRef.current = false;
     }
   }, [clearData, user]);
 
   useEffect(() => {
     void refreshEvents();
   }, [refreshEvents]);
+
+  useEffect(() => {
+    if (!user) {
+      return;
+    }
+
+    let appIsActive = true;
+    let refreshTimeout: ReturnType<typeof setTimeout> | null = null;
+    const scheduleRefresh = () => {
+      if (refreshTimeout) {
+        clearTimeout(refreshTimeout);
+      }
+
+      refreshTimeout = setTimeout(() => {
+        void refreshEvents({ silent: true });
+      }, 100);
+    };
+    const unsubscribe = subscribeToEventsDataChanges(scheduleRefresh);
+    const appStateSubscription = AppState.addEventListener('change', (state) => {
+      appIsActive = state === 'active';
+
+      if (appIsActive) {
+        scheduleRefresh();
+      }
+    });
+    const pollingInterval = setInterval(() => {
+      if (appIsActive) {
+        scheduleRefresh();
+      }
+    }, 2000);
+
+    return () => {
+      if (refreshTimeout) {
+        clearTimeout(refreshTimeout);
+      }
+
+      clearInterval(pollingInterval);
+      unsubscribe();
+      appStateSubscription.remove();
+    };
+  }, [refreshEvents, user]);
 
   const balances = useMemo(
     () => calculateOutstandingBalances(events, expenses, repayments),

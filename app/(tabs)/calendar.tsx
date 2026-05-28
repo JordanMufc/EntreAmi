@@ -12,6 +12,7 @@ import {
 import { BackToHomeButton } from "@/components/back-to-home-button";
 import { useAuth } from "@/src/presentation/auth/auth-context";
 import { useEvents } from "@/src/presentation/events/events-context";
+import { useEventsRefreshControl } from "@/src/presentation/events/use-events-refresh-control";
 import {
   formatFrenchDateInput,
   getDateSortValue,
@@ -122,6 +123,7 @@ export default function CalendarScreen() {
     friends,
     invitations,
   } = useEvents();
+  const refreshControl = useEventsRefreshControl();
   const [activeExpenseEventId, setActiveExpenseEventId] = useState("");
   const [activeInviteEventId, setActiveInviteEventId] = useState("");
   const [expenseTitle, setExpenseTitle] = useState("");
@@ -383,6 +385,7 @@ export default function CalendarScreen() {
     <ScrollView
       contentContainerStyle={styles.container}
       keyboardShouldPersistTaps="handled"
+      refreshControl={refreshControl}
     >
       <BackToHomeButton />
 

@@ -13,9 +13,11 @@ import {
 
 import { BackToHomeButton } from '@/components/back-to-home-button';
 import { useAuth } from '@/src/presentation/auth/auth-context';
+import { useEventsRefreshControl } from '@/src/presentation/events/use-events-refresh-control';
 
 export default function ProfileScreen() {
   const { updateProfile, user } = useAuth();
+  const refreshControl = useEventsRefreshControl();
   const [username, setUsername] = useState('');
   const [bankAccount, setBankAccount] = useState('');
   const [message, setMessage] = useState('');
@@ -58,7 +60,10 @@ export default function ProfileScreen() {
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       style={styles.screen}>
-      <ScrollView contentContainerStyle={styles.container} keyboardShouldPersistTaps="handled">
+      <ScrollView
+        contentContainerStyle={styles.container}
+        keyboardShouldPersistTaps="handled"
+        refreshControl={refreshControl}>
         <BackToHomeButton />
 
         <View style={styles.header}>
